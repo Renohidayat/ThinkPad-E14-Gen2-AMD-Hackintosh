@@ -1,0 +1,20 @@
+# macOS & OS generated
+.DS_Store
+.AppleDouble
+.LSOverride
+Icon
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# Backups & Editor Temp
+*.bak
+*.backup
+*.tmp
+*.orig
+*~
+
+# Logs
+opencore-*.txt
