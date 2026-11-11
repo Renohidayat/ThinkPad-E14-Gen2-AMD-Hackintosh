@@ -1,89 +1,151 @@
 # Lenovo ThinkPad E14 Gen 2 (AMD) — OpenCore EFI
 
-Working OpenCore configuration for running macOS Ventura on the Lenovo ThinkPad E14 Gen 2 (Type 20T9) powered by AMD Ryzen 5 4500U (Renoir).
-
-![macOS Installer Success](assets/macos-recovery-success.jpg)
+[ **English** ](#english) • [ **Bahasa Indonesia** ](#bahasa-indonesia)
 
 ---
 
-## Hardware Specifications
+<a name="english"></a>
+## English
+
+A verified OpenCore configuration for running macOS Ventura on the **Lenovo ThinkPad E14 Gen 2 (Type 20T9)** equipped with an **AMD Ryzen 5 4500U (Renoir)** processor.
+
+### Hardware Specifications
 
 | Component | Specification |
 | :--- | :--- |
 | **Model** | Lenovo ThinkPad E14 Gen 2 (Type 20T9) |
-| **Processor** | AMD Ryzen 5 4500U (6 Cores / 6 Threads, Zen 2 Renoir) |
-| **Graphics** | AMD Radeon Vega 6 (Integrated) |
-| **Audio** | Realtek ALC257 |
-| **Keyboard / Touchpad** | PS/2 Keyboard & TrackPoint / Synaptics Touchpad |
+| **Processor** | AMD Ryzen 5 4500U (6 Cores, 6 Threads, Zen 2 Renoir) |
+| **Graphics** | AMD Radeon Vega 6 (Integrated iGPU) |
+| **Display** | 14.0" Full HD (1920x1080) IPS |
+| **Audio** | Realtek ALC257 (Layout ID `96` or `11`) |
+| **Touchpad / TrackPoint** | Synaptics / ELAN PS/2 Keyboard & TrackPoint |
 | **Bootloader** | OpenCore 1.0.8 |
 | **Target OS** | macOS Ventura (13.x) |
 
----
-
-## Hardware Functionality
+### Feature & Hardware Status
 
 - **CPU Power Management**: Working (`AMDRyzenCPUPowerManagement.kext` + `SMCAMDProcessor.kext`)
-- **Graphics Acceleration**: Working with Metal support via `NootedRed.kext`
-- **Keyboard & TouchPoint**: Working via `VoodooPS2Controller.kext`
-- **Battery Status**: Working via `ECEnabler.kext` + `SMCBatteryManager.kext`
-- **Display Brightness**: Working via `SSDT-PNLF.aml` + `BrightnessKeys.kext`
-- **USB Ports**: Mapped via `SSDT-USBX.aml` & `SSDT-USB-Reset.aml`
-- **Audio**: Working via `AppleALC.kext` (Layout ID 96 / 11)
+- **Graphics Acceleration**: Working with full Metal 2/3 hardware acceleration via `NootedRed.kext`
+- **Display Brightness Control**: Working via `SSDT-PNLF.aml` and `BrightnessKeys.kext`
+- **Keyboard & TrackPoint**: Working via `VoodooPS2Controller.kext`
+- **Battery Readout**: Working via `ECEnabler.kext` + `SMCBatteryManager.kext`
+- **USB Power & Sleep**: Fully configured via `SSDT-USBX.aml` and `SSDT-USB-Reset.aml`
+- **Audio Output & Mic**: Working via `AppleALC.kext`
 
----
+### Key Technical Solution: Bypassing `[EB|LOG:EXITBS:START]`
 
-## Technical Highlights: Solving `[EB|LOG:EXITBS:START]`
+On AMD Renoir ThinkPads, standard OpenCore quirks often freeze indefinitely at `#[EB|LOG:EXITBS:START]`. This configuration solves that through:
 
-Many Ryzen 4000 series ThinkPads encounter an indefinite freeze at `[EB|LOG:EXITBS:START]` during boot. This configuration resolves the issue through the following parameters:
-
-1. **Firmware Memory Map Handling**:
+1. **UEFI Memory Map Handling**:
    - `EnableWriteUnprotector` = `True`
    - `RebuildAppleMemoryMap` = `False`
    - `SyncRuntimePermissions` = `False`
    - `SetupVirtualMap` = `True`
-   *Reasoning:* Lenovo AMD firmware conflicts with OpenCore's runtime memory rebuild. Bypassing memory rebuilding allows the kernel to transition smoothly.
+   *Explanation:* Lenovo ThinkPad AMD firmware conflicts with OpenCore runtime memory rebuilds. Disabling runtime rebuild avoids the transition stall.
 
 2. **AMD Vanilla Core Topology**:
    - `ProvideCurrentCpuInfo` = `True`
-   *Reasoning:* Required by modern AMD Vanilla kernel patches to deliver proper core count and topology to macOS.
+   *Explanation:* Required by universal AMD Vanilla kernel patches to feed the correct CPU core layout to macOS.
 
-3. **Panic Mitigation**:
-   - `AppleMCEReporterDisabler.kext` is injected to prevent instant panics triggered by macOS AppleMCEReporter on AMD processors.
+3. **Kernel Panic Prevention**:
+   - `AppleMCEReporterDisabler.kext` prevents the immediate panic caused by Apple's machine-check reporter on non-Intel CPUs.
 
 4. **Embedded Controller**:
-   - `SSDT-EC.aml` targets `\_SB.PCI0.LPC0.EC` matching the ThinkPad DSDT layout.
+   - `SSDT-EC.aml` targets `\_SB.PCI0.LPC0.EC` matching the ThinkPad DSDT LPC bus hierarchy.
+
+### Setup Instructions
+
+1. **Generate Unique Serial Numbers**:
+   - Open `EFI/OC/config.plist` using ProperTree or OpenCore Auxiliary Tools.
+   - Go to `PlatformInfo` -> `Generic`.
+   - Set `SystemProductName` to `MacBookPro16,3`.
+   - Generate `SystemSerialNumber`, `MLB`, and `SystemUUID` using `macserial`.
+2. **BIOS Settings**:
+   - **Disable**: Secure Boot, Fast Boot.
+   - **Enable**: AMD V(TM) Technology (SVM), UEFI Only Mode.
+3. **Booting**:
+   - Copy the `EFI` directory to your USB FAT32 EFI partition.
+   - In the OpenCore menu, run **Reset NVRAM** once.
+   - Select the macOS installer to proceed.
 
 ---
 
-## How to Use
+<a name="bahasa-indonesia"></a>
+## Bahasa Indonesia
 
-### 1. Configure Serial Numbers
-For security, SMBIOS identifiers in `EFI/OC/config.plist` are left blank. Before booting:
-1. Open `EFI/OC/config.plist` with OpenCore Auxiliary Tools or ProperTree.
-2. Navigate to `PlatformInfo` -> `Generic`.
-3. Set model to `MacBookPro16,3`.
-4. Generate and fill:
-   - `SystemSerialNumber`
-   - `MLB`
-   - `SystemUUID`
+Konfigurasi OpenCore yang telah diuji untuk menjalankan macOS Ventura pada laptop **Lenovo ThinkPad E14 Gen 2 (Tipe 20T9)** dengan prosesor **AMD Ryzen 5 4500U (Renoir)**.
 
-### 2. Recommended BIOS Settings
-- **Disable**:
-  - Secure Boot
-  - Fast Boot
-- **Enable**:
-  - AMD V(TM) Technology / SVM
-  - UEFI Only Boot Mode
+### Spesifikasi Perangkat Keras
 
-### 3. Booting
-1. Copy the `EFI` directory to your USB EFI partition.
-2. Boot into the OpenCore menu.
-3. Select **Reset NVRAM** once.
-4. Select your macOS installer and proceed.
+| Komponen | Spesifikasi |
+| :--- | :--- |
+| **Model Laptop** | Lenovo ThinkPad E14 Gen 2 (Type 20T9) |
+| **Prosesor** | AMD Ryzen 5 4500U (6 Core, 6 Thread, Zen 2 Renoir) |
+| **Kartu Grafis** | AMD Radeon Vega 6 (iGPU Terintegrasi) |
+| **Layar** | 14.0" Full HD (1920x1080) IPS |
+| **Audio** | Realtek ALC257 (Layout ID `96` atau `11`) |
+| **Keyboard & Touchpad** | Keyboard PS/2, TrackPoint & Touchpad Synaptics |
+| **Bootloader** | OpenCore 1.0.8 |
+| **Target Sistem Operasi** | macOS Ventura (13.x) |
+
+### Status Fungsi Perangkat Keras
+
+- **Manajemen Daya CPU**: Berfungsi normal (`AMDRyzenCPUPowerManagement.kext` + `SMCAMDProcessor.kext`)
+- **Akselerasi Grafis**: Berfungsi penuh dengan dukungan Metal 2/3 melalui `NootedRed.kext`
+- **Pengatur Kecerahan Layar**: Berfungsi melalui `SSDT-PNLF.aml` dan `BrightnessKeys.kext`
+- **Keyboard & TrackPoint**: Berfungsi melalui `VoodooPS2Controller.kext`
+- **Indikator Persentase Baterai**: Berfungsi melalui `ECEnabler.kext` + `SMCBatteryManager.kext`
+- **Port & Manajemen Daya USB**: Berfungsi melalui `SSDT-USBX.aml` dan `SSDT-USB-Reset.aml`
+- **Audio & Mikrofon**: Berfungsi melalui `AppleALC.kext`
+
+### Penjelasan Teknis: Solusi Masalah `[EB|LOG:EXITBS:START]`
+
+Kebanyakan laptop ThinkPad AMD Ryzen 4000 mengalami macet total (*freeze*) pada baris log `#[EB|LOG:EXITBS:START]`. Konfigurasi ini menyelesaikannya dengan kombinasi parameter berikut:
+
+1. **Penyesuaian Peta Memori UEFI**:
+   - `EnableWriteUnprotector` = `True`
+   - `RebuildAppleMemoryMap` = `False`
+   - `SyncRuntimePermissions` = `False`
+   - `SetupVirtualMap` = `True`
+   *Alasan:* Firmware BIOS Lenovo AMD mengalami bentrok jika OpenCore membangun ulang tabel memori saat runtime. Mematikan `RebuildAppleMemoryMap` memungkinkan kernel masuk dengan mulus.
+
+2. **Topologi Core AMD Vanilla**:
+   - `ProvideCurrentCpuInfo` = `True`
+   *Alasan:* Wajib aktif agar kumpulan patch kernel AMD Vanilla dapat memberikan informasi core CPU yang valid ke kernel macOS.
+
+3. **Pencegahan Kernel Panic**:
+   - `AppleMCEReporterDisabler.kext` digunakan untuk mencegah panic bawaan sistem macOS pada CPU non-Intel.
+
+4. **Embedded Controller**:
+   - `SSDT-EC.aml` mengarah langsung ke jalur perangkat `\_SB.PCI0.LPC0.EC` sesuai struktur DSDT ThinkPad.
+
+### Panduan Penggunaan
+
+1. **Mengisi Nomor Seri Apple (SMBIOS)**:
+   - Buka `EFI/OC/config.plist` menggunakan editor plist (ProperTree atau OCAT).
+   - Masuk ke bagian `PlatformInfo` -> `Generic`.
+   - Pastikan model adalah `MacBookPro16,3`.
+   - Buat serial baru untuk `SystemSerialNumber`, `MLB`, dan `SystemUUID` menggunakan tool `macserial`.
+2. **Pengaturan BIOS**:
+   - **Nonaktifkan (Disable)**: Secure Boot, Fast Boot.
+   - **Aktifkan (Enable)**: AMD V(TM) / SVM, Mode Boot UEFI Only.
+3. **Langkah Booting**:
+   - Salin folder `EFI` ke partisi EFI flashdisk Anda.
+   - Di menu OpenCore, jalankan opsi **Reset NVRAM** satu kali.
+   - Pilih menu installer macOS untuk melanjutkan instalasi.
 
 ---
 
-## Credits
-- [Acidanthera](https://github.com/acidanthera) for OpenCore and core drivers.
-- [ChefKissInc](https://github.com/ChefKissInc) for NootedRed.
-- [AMD-OSX](https://github.com/AMD-OSX) community for kernel patch development.
+## References / Referensi
+
+1. **Dortania OpenCore Install Guide**: [dortania.github.io/OpenCore-Install-Guide](https://dortania.github.io/OpenCore-Install-Guide/)
+2. **AMD Vanilla Kernel Patches**: [github.com/AMD-OSX/AMD_Vanilla](https://github.com/AMD-OSX/AMD_Vanilla)
+3. **NootedRed (AMD Vega Metal Acceleration)**: [github.com/ChefKissInc/NootedRed](https://github.com/ChefKissInc/NootedRed)
+4. **Acidanthera OpenCorePkg & Drivers**: [github.com/acidanthera/OpenCorePkg](https://github.com/acidanthera/OpenCorePkg)
+5. **Lenovo ThinkPad E14 Gen 2 Platform Specifications (PSREF)**: [psref.lenovo.com](https://psref.lenovo.com)
+
+---
+
+## License / Lisensi
+
+Proyek ini didistribusikan di bawah lisensi [MIT License](LICENSE).
